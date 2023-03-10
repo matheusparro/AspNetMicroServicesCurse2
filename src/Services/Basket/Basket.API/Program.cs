@@ -1,5 +1,7 @@
 
+using Basket.API.GrpcServices;
 using Basket.API.Repositories;
+using Discount.Grpc.Protos;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Basket.API
@@ -11,17 +13,29 @@ namespace Basket.API
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-            builder.Services.AddStackExchangeRedisCache(options =>
-            {
-                options.Configuration = builder.Configuration.GetValue<string>("CacheSettings:ConnectionString");
-            });
-            builder.Services.AddScoped<IBasketRepository, BasketRepository>();
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
-         
+
+            // Redis Configuration
+            builder.Services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = builder.Configuration.GetValue<string>("CacheSettings:ConnectionString");
+            });
+
+            // General Configuration
+            builder.Services.AddScoped<IBasketRepository, BasketRepository>();
+
+            // Grpc Configuration
+            builder.Services.AddGrpcClient<DiscountProtoService.DiscountProtoServiceClient>(o => o.Address = new Uri(builder.Configuration["GrpcSettings:DiscountUrl"]));
+            builder.Services.AddScoped<DiscountGrpcService>();
+
+            
+            
+            // builder.Services.AddMassTransitHostedService(); .NET7 doesn't need this line.
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -32,7 +46,6 @@ namespace Basket.API
             }
 
             app.UseAuthorization();
-
 
             app.MapControllers();
 
