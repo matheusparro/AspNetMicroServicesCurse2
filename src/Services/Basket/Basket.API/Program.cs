@@ -2,7 +2,7 @@
 using Basket.API.GrpcServices;
 using Basket.API.Repositories;
 using Discount.Grpc.Protos;
-using Microsoft.Extensions.DependencyInjection;
+using MassTransit;
 
 namespace Basket.API
 {
@@ -27,13 +27,22 @@ namespace Basket.API
 
             // General Configuration
             builder.Services.AddScoped<IBasketRepository, BasketRepository>();
+            builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
             // Grpc Configuration
             builder.Services.AddGrpcClient<DiscountProtoService.DiscountProtoServiceClient>(o => o.Address = new Uri(builder.Configuration["GrpcSettings:DiscountUrl"]));
             builder.Services.AddScoped<DiscountGrpcService>();
 
-            
-            
+            builder.Services.AddMassTransit(config =>
+            {
+                config.UsingRabbitMq((ctx, cfg) =>
+                {
+                    cfg.Host(builder.Configuration["EventBusSettings:HostAddress"]);
+                });
+            });
+
+
+
             // builder.Services.AddMassTransitHostedService(); .NET7 doesn't need this line.
 
             var app = builder.Build();
